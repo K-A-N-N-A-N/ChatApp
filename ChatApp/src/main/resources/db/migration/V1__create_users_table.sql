@@ -17,6 +17,7 @@ CREATE TABLE chat_room (
     id CHAR(36) NOT NULL,
     type VARCHAR(20) NOT NULL,
     created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP,
     PRIMARY KEY (id)
 );
 
@@ -45,6 +46,7 @@ CREATE TABLE message (
     sender_id CHAR(36) NOT NULL,
     content TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP,
     deleted BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (id),
     CONSTRAINT fk_message_room
