@@ -13,24 +13,27 @@ import java.time.Instant;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "chat_room_member")
+@Table(
+        name = "chat_room_member",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"chat_room_id", "user_id"})
+        }
+)
 public class ChatRoomMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(updatable = false, nullable = false, columnDefinition = "CHAR(36)")
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chat_room_id", nullable = false, columnDefinition = "CHAR(36)")
     private ChatRoom chatRoom;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, columnDefinition = "CHAR(36)")
     private ChatUser user;
 
-    @Column(length = 20)
-    private String role = "MEMBER";
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ChatRoomRole role;
 
     @Column(nullable = false)
     private Instant joinedAt;
