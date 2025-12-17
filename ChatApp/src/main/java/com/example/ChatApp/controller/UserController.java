@@ -3,7 +3,6 @@ package com.example.ChatApp.controller;
 import com.example.ChatApp.dto.LoginRequest;
 import com.example.ChatApp.entity.ChatUser;
 import com.example.ChatApp.service.UserService;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

@@ -1,5 +1,6 @@
 package com.example.ChatApp.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,5 +31,6 @@ public class Message extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Boolean deleted = false;
 }
