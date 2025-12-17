@@ -34,14 +34,14 @@ public class UserService {
     public ChatUser login(String username, String rawPassword) {
 
         ChatUser user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Invalid username"));
+                .orElseThrow(() -> new RuntimeException("Invalid username or password"));
 
         if (!user.getActive()) {
             throw new RuntimeException("User account is deactivated");
         }
 
         if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
-            throw new RuntimeException("Invalid password");
+            throw new RuntimeException("Invalid password or password");
         }
 
         return user;
