@@ -23,6 +23,8 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
             @Param("userB") String userB,
             @Param("type") ChatRoomType type
     );
+
+    boolean existsByChatRoomIdAndUserId(String chatRoomId, String userId);
 }
 
 
