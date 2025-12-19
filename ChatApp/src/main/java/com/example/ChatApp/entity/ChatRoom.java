@@ -19,6 +19,10 @@ public class ChatRoom extends BaseEntity {
     @Column(updatable = false, nullable = false, columnDefinition = "CHAR(36)")
     private String id;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String type; // PRIVATE / GROUP
+    private ChatRoomType type;
+
+    @Column(length = 100)
+    private String name; //only for group
 }
