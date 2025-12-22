@@ -22,11 +22,6 @@ public class UserController {
         return userService.createUser(user);
     }
 
-    @PostMapping("/login")
-    public ChatUser login(@RequestBody LoginRequest request) {
-        return userService.login(request.username(), request.password());
-    }
-
     @GetMapping("/{id}")
     public ChatUser getUser(@PathVariable String id) {
         return userService.getUser(id);
