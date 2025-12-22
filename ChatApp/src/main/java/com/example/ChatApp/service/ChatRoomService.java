@@ -7,6 +7,7 @@ import com.example.ChatApp.repository.ChatRoomRepository;
 import com.example.ChatApp.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -15,6 +16,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
@@ -44,6 +46,14 @@ public class ChatRoomService {
         if (!roomIds.isEmpty()) {
             ChatRoom existingRoom = chatRoomRepository.findById(roomIds.get(0))
                     .orElseThrow();
+
+            log.info(
+                    "Connected to EXISTING PRIVATE chat | roomId={} | users=[{}, {}]",
+                    existingRoom.getId(),
+                    currentUser.getUsername(),
+                    targetUser.getUsername()
+            );
+
             return mapToResponse(existingRoom);
         }
 
@@ -56,6 +66,13 @@ public class ChatRoomService {
         // Both are ADMINs
         memberRepository.save(createMember(room, currentUser, ChatRoomRole.ADMIN));
         memberRepository.save(createMember(room, targetUser, ChatRoomRole.ADMIN));
+
+        log.info(
+                "NEW PRIVATE chat CREATED | roomId={} | users=[{}, {}]",
+                room.getId(),
+                currentUser.getUsername(),
+                targetUser.getUsername()
+        );
 
         return mapToResponse(room);
     }
