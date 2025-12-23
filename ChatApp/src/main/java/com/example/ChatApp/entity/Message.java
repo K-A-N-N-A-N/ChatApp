@@ -1,5 +1,6 @@
 package com.example.ChatApp.entity;
 
+import com.example.ChatApp.service.MessageEncryptConverter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -33,6 +34,7 @@ public class Message extends BaseEntity {
     private MessageType messageType = MessageType.TEXT;
 
     @Column(nullable = false, columnDefinition = "TEXT")
+    @Convert(converter = MessageEncryptConverter.class)
     private String content;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
