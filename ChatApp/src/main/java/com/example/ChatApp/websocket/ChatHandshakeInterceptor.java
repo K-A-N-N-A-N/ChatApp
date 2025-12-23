@@ -37,7 +37,7 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
         String userId = (String) session.getAttribute("USER_ID");
         if (userId == null) return false;
 
-        // chatRoomId still comes from URL
+        // chatRoomId comes from URL
         String chatRoomId =
                 servletRequest.getServletRequest().getParameter("chatRoomId");
 
