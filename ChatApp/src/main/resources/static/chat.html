@@ -40,56 +40,67 @@
 
 <script>
     const params = new URLSearchParams(window.location.search);
-    const userId = params.get("userId");
-    const username = params.get("username");
     const chatRoomId = params.get("chatRoomId");
 
-    if (!userId || !username || !chatRoomId) {
-        alert("Missing userId / username / chatRoomId");
-        throw new Error("Missing params");
+    if (!chatRoomId) {
+        alert("Missing chatRoomId");
+        throw new Error("Missing chatRoomId");
     }
 
-    // Header
-    document.getElementById("header").innerHTML = `
-        <b>Connected as:</b> ${username}<br/>
-        <b>Private Chat</b>
-    `;
+    let currentUserId;
+    let currentUsername;
+    let stompClient;
 
     const chatDiv = document.getElementById("chat");
 
     // ================================
-    // LOAD CHAT HISTORY FIRST
+    //  FETCH LOGGED-IN USER
     // ================================
-    fetch(`/chatrooms/${chatRoomId}/messages`)
+    fetch("/auth/me")
         .then(res => res.json())
-        .then(messages => {
-            messages.forEach(body => {
-                const isMe = body.senderId === userId;
-                const senderLabel = isMe ? "You" : body.senderUsername;
-                const cssClass = isMe ? "me" : "other";
+        .then(user => {
+            if (!user.userId || !user.username) {
+                alert("User not logged in");
+                throw new Error("Not logged in");
+            }
 
-                chatDiv.innerHTML +=
-                    `<p class="${cssClass}">${senderLabel}: ${body.content}</p>`;
-            });
+            currentUserId = user.userId;
+            currentUsername = user.username;
 
-            chatDiv.scrollTop = chatDiv.scrollHeight;
+            document.getElementById("header").innerHTML = `
+                <b>Connected as:</b> ${currentUsername}<br/>
+                <b>Private Chat</b>
+            `;
 
-            // After history is loaded → connect WebSocket
-            connectWebSocket();
-        })
-        .catch(err => {
-            console.error("Failed to load chat history", err);
-            connectWebSocket(); // still connect even if history fails
+            loadChatHistory();
         });
 
-    let stompClient;
+    // ================================
+    //  LOAD CHAT HISTORY
+    // ================================
+    function loadChatHistory() {
+        fetch(`/chatrooms/${chatRoomId}/messages`)
+            .then(res => res.json())
+            .then(messages => {
+                messages.forEach(body => {
+                    renderMessage(body);
+                });
+
+                chatDiv.scrollTop = chatDiv.scrollHeight;
+                connectWebSocket();
+            })
+            .catch(err => {
+                console.error("Failed to load chat history", err);
+                connectWebSocket();
+            });
+    }
 
     // ================================
-    // CONNECT WEBSOCKET
+    //  CONNECT WEBSOCKET
     // ================================
     function connectWebSocket() {
         const socket = new WebSocket(
-            "ws://localhost:8080/ws?userId=" + userId + "&chatRoomId=" + chatRoomId
+            "ws://localhost:8080/ws?chatRoomId=" + chatRoomId
         );
 
         stompClient = Stomp.over(socket);
@@ -99,21 +110,27 @@
 
             stompClient.subscribe("/topic/chatroom/" + chatRoomId, (msg) => {
                 const body = JSON.parse(msg.body);
-
-                const isMe = body.senderId === userId;
-                const senderLabel = isMe ? "You" : body.senderUsername;
-                const cssClass = isMe ? "me" : "other";
-
-                chatDiv.innerHTML +=
-                    `<p class="${cssClass}">${senderLabel}: ${body.content}</p>`;
-
-                chatDiv.scrollTop = chatDiv.scrollHeight;
+                renderMessage(body);
             });
         });
     }
 
     // ================================
-    // SEND MESSAGE
+    //  RENDER MESSAGE
+    // ================================
+    function renderMessage(body) {
+        const isMe = body.senderId === currentUserId;
+        const senderLabel = isMe ? "You" : body.senderUsername;
+        const cssClass = isMe ? "me" : "other";
+
+        chatDiv.innerHTML +=
+            `<p class="${cssClass}">${senderLabel}: ${body.content}</p>`;
+
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    // ================================
+    //  SEND MESSAGE
     // ================================
     function send() {
         const input = document.getElementById("message");

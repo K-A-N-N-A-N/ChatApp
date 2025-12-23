@@ -9,6 +9,7 @@ public interface UserRepository extends JpaRepository<ChatUser, String> {
 
     Optional<ChatUser> findByUsername(String username);
     Optional<ChatUser> findByIdAndActiveTrue(String id);
+    Optional<ChatUser> findByUsernameAndActiveTrue(String username);
 
     boolean existsByUsername(String username);
 }
