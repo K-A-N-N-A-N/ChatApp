@@ -41,7 +41,7 @@ public class UserService {
         }
 
         if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
-            throw new RuntimeException("Invalid password or password");
+            throw new RuntimeException("Invalid username or password");
         }
 
         return user;

@@ -33,7 +33,6 @@
 <body>
 
 <div id="header"></div>
-
 <div id="chat"></div>
 
 <input id="message" placeholder="Type message..." style="width: 80%;" />
@@ -42,7 +41,7 @@
 <script>
     const params = new URLSearchParams(window.location.search);
     const userId = params.get("userId");
-    const username = params.get("username"); // 👈 pass this in URL
+    const username = params.get("username");
     const chatRoomId = params.get("chatRoomId");
 
     if (!userId || !username || !chatRoomId) {
@@ -50,37 +49,72 @@
         throw new Error("Missing params");
     }
 
-    // Header (no room id shown)
+    // Header
     document.getElementById("header").innerHTML = `
         <b>Connected as:</b> ${username}<br/>
         <b>Private Chat</b>
     `;
 
-    const socket = new WebSocket(
-        "ws://localhost:8080/ws?userId=" + userId + "&chatRoomId=" + chatRoomId
-    );
+    const chatDiv = document.getElementById("chat");
 
-    const stompClient = Stomp.over(socket);
+    // ================================
+    // LOAD CHAT HISTORY FIRST
+    // ================================
+    fetch(`/chatrooms/${chatRoomId}/messages`)
+        .then(res => res.json())
+        .then(messages => {
+            messages.forEach(body => {
+                const isMe = body.senderId === userId;
+                const senderLabel = isMe ? "You" : body.senderUsername;
+                const cssClass = isMe ? "me" : "other";
 
-    stompClient.connect({}, () => {
-        console.log("✅ Connected");
+                chatDiv.innerHTML +=
+                    `<p class="${cssClass}">${senderLabel}: ${body.content}</p>`;
+            });
 
-        stompClient.subscribe("/topic/chatroom/" + chatRoomId, (msg) => {
-            const body = JSON.parse(msg.body);
-
-            const isMe = body.senderId === userId;
-            const senderLabel = isMe ? "You" : body.senderUsername;
-            const cssClass = isMe ? "me" : "other";
-
-            document.getElementById("chat").innerHTML +=
-                `<p class="${cssClass}">${senderLabel}: ${body.content}</p>`;
-
-            // auto-scroll
-            const chatDiv = document.getElementById("chat");
             chatDiv.scrollTop = chatDiv.scrollHeight;
-        });
-    });
 
+            // After history is loaded → connect WebSocket
+            connectWebSocket();
+        })
+        .catch(err => {
+            console.error("Failed to load chat history", err);
+            connectWebSocket(); // still connect even if history fails
+        });
+
+    let stompClient;
+
+    // ================================
+    // CONNECT WEBSOCKET
+    // ================================
+    function connectWebSocket() {
+        const socket = new WebSocket(
+            "ws://localhost:8080/ws?userId=" + userId + "&chatRoomId=" + chatRoomId
+        );
+
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, () => {
+            console.log(" WebSocket connected");
+
+            stompClient.subscribe("/topic/chatroom/" + chatRoomId, (msg) => {
+                const body = JSON.parse(msg.body);
+
+                const isMe = body.senderId === userId;
+                const senderLabel = isMe ? "You" : body.senderUsername;
+                const cssClass = isMe ? "me" : "other";
+
+                chatDiv.innerHTML +=
+                    `<p class="${cssClass}">${senderLabel}: ${body.content}</p>`;
+
+                chatDiv.scrollTop = chatDiv.scrollHeight;
+            });
+        });
+    }
+
+    // ================================
+    // SEND MESSAGE
+    // ================================
     function send() {
         const input = document.getElementById("message");
         if (!input.value.trim()) return;
