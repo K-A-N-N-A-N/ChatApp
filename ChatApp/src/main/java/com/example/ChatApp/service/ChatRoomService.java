@@ -97,4 +97,15 @@ public class ChatRoomService {
                 room.getName()
         );
     }
+
+    public ChatRoomResponse createPrivateChatByUsername(
+            String currentUserId,
+            String targetUsername
+    ) {
+        ChatUser targetUser = userRepository.findByUsernameAndActiveTrue(targetUsername)
+                .orElseThrow(() -> new RuntimeException("Target user not found"));
+
+        return createPrivateChat(currentUserId, targetUser.getId());
+    }
+
 }
