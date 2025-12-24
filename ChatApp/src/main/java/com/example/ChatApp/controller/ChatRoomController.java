@@ -1,8 +1,6 @@
 package com.example.ChatApp.controller;
 
-import com.example.ChatApp.dto.ChatMessageResponse;
-import com.example.ChatApp.dto.ChatRoomResponse;
-import com.example.ChatApp.dto.CreateGroupRequest;
+import com.example.ChatApp.dto.*;
 import com.example.ChatApp.repository.MessageRepository;
 import com.example.ChatApp.service.ChatRoomService;
 import jakarta.servlet.http.HttpSession;
@@ -46,6 +44,15 @@ public class ChatRoomController {
                 .toList();
     }
 
+    @GetMapping("/listMyChatRooms")
+    public List<ChatRoomListResponse> listMyChatRooms(HttpSession session) {
+        String userId = (String) session.getAttribute("USER_ID");
+        if (userId == null) {
+            throw new RuntimeException("Not logged in");
+        }
+        return chatRoomService.listMyChatRooms(userId);
+    }
+
     @PostMapping("/group")
     public ChatRoomResponse createGroup(
             @RequestBody CreateGroupRequest request,
@@ -58,25 +65,29 @@ public class ChatRoomController {
     }
 
     @PostMapping("/group/{chatRoomId}/members")
-    public void addGroupMember(
+    public ApiResponse addGroupMember(
             @PathVariable String chatRoomId,
-            @RequestBody Map<String, String> body,
+            @RequestBody AddMemberRequest request,
             HttpSession session
     ) {
-        String adminId = (String) session.getAttribute("USER_ID");
-        if (adminId == null) throw new RuntimeException("Not logged in");
+        String adminUserId = (String) session.getAttribute("USER_ID");
+        if (adminUserId == null) {
+            throw new RuntimeException("Not logged in");
+        }
 
         chatRoomService.addMemberToGroup(
-                adminId,
+                adminUserId,
                 chatRoomId,
-                body.get("username")
+                request.getUsername()
         );
+
+        return new ApiResponse("User added to group successfully");
     }
 
-    @DeleteMapping("/group/{chatRoomId}/members/{userId}")
-    public void removeGroupMember(
+    @DeleteMapping("/group/{chatRoomId}/members")
+    public ApiResponse removeGroupMember(
             @PathVariable String chatRoomId,
-            @PathVariable String userId,
+            @RequestBody RemoveMemberRequest request,
             HttpSession session
     ) {
         String adminUserId = (String) session.getAttribute("USER_ID");
@@ -87,8 +98,10 @@ public class ChatRoomController {
         chatRoomService.removeMemberFromGroup(
                 adminUserId,
                 chatRoomId,
-                userId
+                request.getUsername()
         );
+
+        return new ApiResponse("User removed from group successfully");
     }
 }
 

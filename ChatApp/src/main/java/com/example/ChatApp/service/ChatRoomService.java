@@ -1,5 +1,6 @@
 package com.example.ChatApp.service;
 
+import com.example.ChatApp.dto.ChatRoomListResponse;
 import com.example.ChatApp.dto.ChatRoomResponse;
 import com.example.ChatApp.entity.*;
 import com.example.ChatApp.repository.ChatRoomMemberRepository;
@@ -179,7 +180,7 @@ public class ChatRoomService {
     public void removeMemberFromGroup(
             String adminUserId,
             String chatRoomId,
-            String targetUserId
+            String targetUsername
     ) {
 
         ChatRoomMember admin =
@@ -190,8 +191,12 @@ public class ChatRoomService {
             throw new RuntimeException("Only admins can remove members");
         }
 
+        ChatUser targetUser =
+                userRepository.findByUsernameAndActiveTrue(targetUsername)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+
         ChatRoomMember target =
-                memberRepository.findByChatRoomIdAndUserId(chatRoomId, targetUserId)
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, targetUser.getId())
                         .orElseThrow(() -> new RuntimeException("User not in group"));
 
         if (target.getRole() == ChatRoomRole.ADMIN) {
@@ -201,9 +206,21 @@ public class ChatRoomService {
         memberRepository.delete(target);
 
         log.info(
-                "USER REMOVED from GROUP | roomId={} | userId={} | byAdmin={}",
-                chatRoomId, targetUserId, adminUserId
+                "USER REMOVED from GROUP | roomId={} | user={}",
+                chatRoomId, targetUsername
         );
+    }
+
+    public List<ChatRoomListResponse> listMyChatRooms(String userId) {
+
+        return chatRoomRepository.findAllByUserId(userId)
+                .stream()
+                .map(room -> new ChatRoomListResponse(
+                        room.getId(),
+                        room.getType().name(),
+                        room.getName()
+                ))
+                .toList();
     }
 
 }
