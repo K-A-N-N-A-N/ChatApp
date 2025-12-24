@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/chatrooms")
@@ -56,6 +57,38 @@ public class ChatRoomController {
         return chatRoomService.createGroupChat(userId, request.groupName());
     }
 
+    @PostMapping("/group/{chatRoomId}/members")
+    public void addGroupMember(
+            @PathVariable String chatRoomId,
+            @RequestBody Map<String, String> body,
+            HttpSession session
+    ) {
+        String adminId = (String) session.getAttribute("USER_ID");
+        if (adminId == null) throw new RuntimeException("Not logged in");
 
+        chatRoomService.addMemberToGroup(
+                adminId,
+                chatRoomId,
+                body.get("username")
+        );
+    }
+
+    @DeleteMapping("/group/{chatRoomId}/members/{userId}")
+    public void removeGroupMember(
+            @PathVariable String chatRoomId,
+            @PathVariable String userId,
+            HttpSession session
+    ) {
+        String adminUserId = (String) session.getAttribute("USER_ID");
+        if (adminUserId == null) {
+            throw new RuntimeException("Not logged in");
+        }
+
+        chatRoomService.removeMemberFromGroup(
+                adminUserId,
+                chatRoomId,
+                userId
+        );
+    }
 }
 

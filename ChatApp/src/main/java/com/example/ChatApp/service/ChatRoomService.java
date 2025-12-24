@@ -133,4 +133,77 @@ public class ChatRoomService {
         return mapToResponse(room);
     }
 
+    public void addMemberToGroup(
+            String adminUserId,
+            String chatRoomId,
+            String targetUsername
+    ) {
+
+        ChatRoom room = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new RuntimeException("Chat room not found"));
+
+        if (room.getType() != ChatRoomType.GROUP) {
+            throw new RuntimeException("Not a group chat");
+        }
+
+        // verify admin
+        ChatRoomMember adminMember =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, adminUserId)
+                        .orElseThrow(() -> new RuntimeException("Not a member"));
+
+        if (adminMember.getRole() != ChatRoomRole.ADMIN) {
+            throw new RuntimeException("Only admins can add members");
+        }
+
+        ChatUser targetUser =
+                userRepository.findByUsernameAndActiveTrue(targetUsername)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean alreadyMember =
+                memberRepository.existsByChatRoomIdAndUserId(chatRoomId, targetUser.getId());
+
+        if (alreadyMember) {
+            throw new RuntimeException("User already in group");
+        }
+
+        memberRepository.save(
+                createMember(room, targetUser, ChatRoomRole.MEMBER)
+        );
+
+        log.info(
+                "USER ADDED to GROUP | roomId={} | user={} | byAdmin={}",
+                chatRoomId, targetUsername, adminUserId
+        );
+    }
+
+    public void removeMemberFromGroup(
+            String adminUserId,
+            String chatRoomId,
+            String targetUserId
+    ) {
+
+        ChatRoomMember admin =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, adminUserId)
+                        .orElseThrow(() -> new RuntimeException("Not a member"));
+
+        if (admin.getRole() != ChatRoomRole.ADMIN) {
+            throw new RuntimeException("Only admins can remove members");
+        }
+
+        ChatRoomMember target =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, targetUserId)
+                        .orElseThrow(() -> new RuntimeException("User not in group"));
+
+        if (target.getRole() == ChatRoomRole.ADMIN) {
+            throw new RuntimeException("Cannot remove another admin");
+        }
+
+        memberRepository.delete(target);
+
+        log.info(
+                "USER REMOVED from GROUP | roomId={} | userId={} | byAdmin={}",
+                chatRoomId, targetUserId, adminUserId
+        );
+    }
+
 }
