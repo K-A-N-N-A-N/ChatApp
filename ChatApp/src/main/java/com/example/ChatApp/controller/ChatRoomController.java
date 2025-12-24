@@ -2,8 +2,10 @@ package com.example.ChatApp.controller;
 
 import com.example.ChatApp.dto.ChatMessageResponse;
 import com.example.ChatApp.dto.ChatRoomResponse;
+import com.example.ChatApp.dto.CreateGroupRequest;
 import com.example.ChatApp.repository.MessageRepository;
 import com.example.ChatApp.service.ChatRoomService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +44,18 @@ public class ChatRoomController {
                 ))
                 .toList();
     }
+
+    @PostMapping("/group")
+    public ChatRoomResponse createGroup(
+            @RequestBody CreateGroupRequest request,
+            HttpSession session
+    ) {
+        String userId = (String) session.getAttribute("USER_ID");
+        if (userId == null) throw new RuntimeException("Not logged in");
+
+        return chatRoomService.createGroupChat(userId, request.groupName());
+    }
+
 
 }
 

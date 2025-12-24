@@ -108,4 +108,29 @@ public class ChatRoomService {
         return createPrivateChat(currentUserId, targetUser.getId());
     }
 
+    // Create Group Chat
+    public ChatRoomResponse createGroupChat(String currentUserId, String groupName) {
+
+        ChatUser creator = userRepository.findByIdAndActiveTrue(currentUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        ChatRoom room = new ChatRoom();
+        room.setType(ChatRoomType.GROUP);
+        room.setName(groupName);
+
+        room = chatRoomRepository.save(room);
+
+        // creator is ADMIN
+        memberRepository.save(
+                createMember(room, creator, ChatRoomRole.ADMIN)
+        );
+
+        log.info(
+                "NEW GROUP chat CREATED | roomId={} | name={} | admin={}",
+                room.getId(), groupName, creator.getUsername()
+        );
+
+        return mapToResponse(room);
+    }
+
 }
