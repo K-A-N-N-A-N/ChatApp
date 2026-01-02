@@ -183,6 +183,7 @@ public class ChatRoomService {
             String targetUsername
     ) {
 
+        // Verify admin user
         ChatRoomMember admin =
                 memberRepository.findByChatRoomIdAndUserId(chatRoomId, adminUserId)
                         .orElseThrow(() -> new RuntimeException("Not a member"));
@@ -191,6 +192,7 @@ public class ChatRoomService {
             throw new RuntimeException("Only admins can remove members");
         }
 
+        // Find target user
         ChatUser targetUser =
                 userRepository.findByUsernameAndActiveTrue(targetUsername)
                         .orElseThrow(() -> new RuntimeException("User not found"));
@@ -199,28 +201,50 @@ public class ChatRoomService {
                 memberRepository.findByChatRoomIdAndUserId(chatRoomId, targetUser.getId())
                         .orElseThrow(() -> new RuntimeException("User not in group"));
 
+        // 🔐 SAFETY CHECK: if target is ADMIN, ensure not last admin
         if (target.getRole() == ChatRoomRole.ADMIN) {
-            throw new RuntimeException("Cannot remove another admin");
+            long adminCount =
+                    memberRepository.countByChatRoomIdAndRole(
+                            chatRoomId,
+                            ChatRoomRole.ADMIN
+                    );
+
+            if (adminCount <= 1) {
+                throw new RuntimeException("Cannot remove the last admin from the group");
+            }
         }
 
         memberRepository.delete(target);
 
         log.info(
-                "USER REMOVED from GROUP | roomId={} | user={}",
-                chatRoomId, targetUsername
+                "USER REMOVED from GROUP | roomId={} | user={} | removedBy={}",
+                chatRoomId,
+                targetUsername,
+                adminUserId
         );
     }
 
+
     public List<ChatRoomListResponse> listMyChatRooms(String userId) {
 
-        return chatRoomRepository.findAllByUserId(userId)
-                .stream()
-                .map(room -> new ChatRoomListResponse(
-                        room.getId(),
-                        room.getType().name(),
-                        room.getName()
-                ))
-                .toList();
+        List<ChatRoom> rooms = chatRoomRepository.findAllByUserId(userId);
+
+        return rooms.stream().map(room -> {
+
+            List<String> members =
+                    memberRepository.findByChatRoomId(room.getId())
+                            .stream()
+                            .map(m -> m.getUser().getUsername())
+                            .toList();
+
+            return new ChatRoomListResponse(
+                    room.getId(),
+                    room.getType().name(),
+                    room.getName(),
+                    members
+            );
+
+        }).toList();
     }
 
     public void promoteToAdmin(
