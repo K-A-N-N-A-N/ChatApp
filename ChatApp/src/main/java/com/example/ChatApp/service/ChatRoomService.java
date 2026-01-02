@@ -223,4 +223,88 @@ public class ChatRoomService {
                 .toList();
     }
 
+    public void promoteToAdmin(
+            String adminUserId,
+            String chatRoomId,
+            String targetUsername
+    ) {
+
+        ChatRoom room = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new RuntimeException("Chat room not found"));
+
+        if (room.getType() != ChatRoomType.GROUP) {
+            throw new RuntimeException("Only group chats support roles");
+        }
+
+        ChatRoomMember admin =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, adminUserId)
+                        .orElseThrow(() -> new RuntimeException("Not a member"));
+
+        if (admin.getRole() != ChatRoomRole.ADMIN) {
+            throw new RuntimeException("Only admins can promote members");
+        }
+
+        ChatUser targetUser =
+                userRepository.findByUsernameAndActiveTrue(targetUsername)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+        ChatRoomMember target =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, targetUser.getId())
+                        .orElseThrow(() -> new RuntimeException("User not in group"));
+
+        if (target.getRole() == ChatRoomRole.ADMIN) {
+            throw new RuntimeException("User is already admin");
+        }
+
+        target.setRole(ChatRoomRole.ADMIN);
+        memberRepository.save(target);
+
+        log.info(
+                "PROMOTED TO ADMIN | roomId={} | user={} | byAdmin={}",
+                chatRoomId, targetUsername, adminUserId
+        );
+    }
+
+    public void demoteToMember(
+            String adminUserId,
+            String chatRoomId,
+            String targetUsername
+    ) {
+
+        ChatRoomMember admin =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, adminUserId)
+                        .orElseThrow(() -> new RuntimeException("Not a member"));
+
+        if (admin.getRole() != ChatRoomRole.ADMIN) {
+            throw new RuntimeException("Only admins can demote admins");
+        }
+
+        ChatUser targetUser =
+                userRepository.findByUsernameAndActiveTrue(targetUsername)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+        ChatRoomMember target =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, targetUser.getId())
+                        .orElseThrow(() -> new RuntimeException("User not in group"));
+
+        if (target.getRole() != ChatRoomRole.ADMIN) {
+            throw new RuntimeException("User is not an admin");
+        }
+
+        long adminCount =
+                memberRepository.countByChatRoomIdAndRole(chatRoomId, ChatRoomRole.ADMIN);
+
+        if (adminCount <= 1) {
+            throw new RuntimeException("Cannot demote the last admin");
+        }
+
+        target.setRole(ChatRoomRole.MEMBER);
+        memberRepository.save(target);
+
+        log.info(
+                "DEMOTED TO MEMBER | roomId={} | user={} | byAdmin={}",
+                chatRoomId, targetUsername, adminUserId
+        );
+    }
+
 }

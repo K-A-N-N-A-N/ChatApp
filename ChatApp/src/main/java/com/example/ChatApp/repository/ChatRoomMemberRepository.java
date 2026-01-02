@@ -1,6 +1,7 @@
 package com.example.ChatApp.repository;
 
 import com.example.ChatApp.entity.ChatRoomMember;
+import com.example.ChatApp.entity.ChatRoomRole;
 import com.example.ChatApp.entity.ChatRoomType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -26,6 +27,10 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
     );
 
     boolean existsByChatRoomIdAndUserId(String chatRoomId, String userId);
+
+    List<ChatRoomMember> findByChatRoomId(String chatRoomId);
+
+    long countByChatRoomIdAndRole(String chatRoomId, ChatRoomRole role);
 
     Optional<ChatRoomMember> findByChatRoomIdAndUserId(
             String chatRoomId,
