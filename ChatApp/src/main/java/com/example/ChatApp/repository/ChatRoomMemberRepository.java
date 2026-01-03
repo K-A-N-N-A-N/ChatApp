@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, String> {
 
@@ -25,6 +26,11 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
     );
 
     boolean existsByChatRoomIdAndUserId(String chatRoomId, String userId);
+
+    Optional<ChatRoomMember> findByChatRoomIdAndUserId(
+            String chatRoomId,
+            String userId
+    );
 }
 
 
