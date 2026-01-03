@@ -103,5 +103,40 @@ public class ChatRoomController {
 
         return new ApiResponse("User removed from group successfully");
     }
+
+    @PostMapping("/group/{chatRoomId}/promote")
+    public ApiResponse promote(
+            @PathVariable String chatRoomId,
+            @RequestBody RoleUpdateRequest request,
+            HttpSession session
+    ) {
+        String adminUserId = (String) session.getAttribute("USER_ID");
+
+        chatRoomService.promoteToAdmin(
+                adminUserId,
+                chatRoomId,
+                request.getUsername()
+        );
+
+        return new ApiResponse("User promoted to admin");
+    }
+
+    @PostMapping("/group/{chatRoomId}/demote")
+    public ApiResponse demote(
+            @PathVariable String chatRoomId,
+            @RequestBody RoleUpdateRequest request,
+            HttpSession session
+    ) {
+        String adminUserId = (String) session.getAttribute("USER_ID");
+
+        chatRoomService.demoteToMember(
+                adminUserId,
+                chatRoomId,
+                request.getUsername()
+        );
+
+        return new ApiResponse("Admin demoted to member");
+    }
+
 }
 

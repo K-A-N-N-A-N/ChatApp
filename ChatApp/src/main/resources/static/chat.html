@@ -9,11 +9,13 @@
             max-width: 600px;
             margin: auto;
         }
+
         #header {
             margin-bottom: 10px;
             padding-bottom: 5px;
             border-bottom: 1px solid #ccc;
         }
+
         #chat {
             border: 1px solid #ccc;
             height: 350px;
@@ -21,12 +23,38 @@
             padding: 10px;
             margin-bottom: 10px;
             background: #fafafa;
+            display: flex;
+            flex-direction: column;
         }
+
+        /* Message wrapper */
+        .message {
+            max-width: 70%;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 10px;
+            word-wrap: break-word;
+            font-size: 14px;
+        }
+
+        /* My messages → right */
         .me {
-            font-weight: bold;
+            align-self: flex-end;
+            background-color: #dcf8c6;
+            text-align: right;
         }
+
+        /* Other messages → left */
         .other {
-            font-weight: normal;
+            align-self: flex-start;
+            background-color: #e5e5ea;
+            text-align: left;
+        }
+
+        .sender {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 3px;
         }
     </style>
 </head>
@@ -54,7 +82,7 @@
     const chatDiv = document.getElementById("chat");
 
     // ================================
-    //  FETCH LOGGED-IN USER
+    // FETCH LOGGED-IN USER
     // ================================
     fetch("/auth/me")
         .then(res => res.json())
@@ -69,23 +97,20 @@
 
             document.getElementById("header").innerHTML = `
                 <b>Connected as:</b> ${currentUsername}<br/>
-                <b>Private Chat</b>
+                <b>Chat Room</b>
             `;
 
             loadChatHistory();
         });
 
     // ================================
-    //  LOAD CHAT HISTORY
+    // LOAD CHAT HISTORY
     // ================================
     function loadChatHistory() {
         fetch(`/chatrooms/${chatRoomId}/messages`)
             .then(res => res.json())
             .then(messages => {
-                messages.forEach(body => {
-                    renderMessage(body);
-                });
-
+                messages.forEach(renderMessage);
                 chatDiv.scrollTop = chatDiv.scrollHeight;
                 connectWebSocket();
             })
@@ -96,7 +121,7 @@
     }
 
     // ================================
-    //  CONNECT WEBSOCKET
+    // CONNECT WEBSOCKET
     // ================================
     function connectWebSocket() {
         const socket = new WebSocket(
@@ -106,31 +131,33 @@
         stompClient = Stomp.over(socket);
 
         stompClient.connect({}, () => {
-            console.log(" WebSocket connected");
-
             stompClient.subscribe("/topic/chatroom/" + chatRoomId, (msg) => {
-                const body = JSON.parse(msg.body);
-                renderMessage(body);
+                renderMessage(JSON.parse(msg.body));
             });
         });
     }
 
     // ================================
-    //  RENDER MESSAGE
+    // RENDER MESSAGE
     // ================================
     function renderMessage(body) {
         const isMe = body.senderId === currentUserId;
-        const senderLabel = isMe ? "You" : body.senderUsername;
         const cssClass = isMe ? "me" : "other";
+        const senderLabel = isMe ? "You" : body.senderUsername;
 
-        chatDiv.innerHTML +=
-            `<p class="${cssClass}">${senderLabel}: ${body.content}</p>`;
+        const messageHtml = `
+            <div class="message ${cssClass}">
+                <div class="sender">${senderLabel}</div>
+                <div>${body.content}</div>
+            </div>
+        `;
 
+        chatDiv.insertAdjacentHTML("beforeend", messageHtml);
         chatDiv.scrollTop = chatDiv.scrollHeight;
     }
 
     // ================================
-    //  SEND MESSAGE
+    // SEND MESSAGE
     // ================================
     function send() {
         const input = document.getElementById("message");

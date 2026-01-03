@@ -183,12 +183,89 @@ public class ChatRoomService {
             String targetUsername
     ) {
 
+        // Verify admin user
         ChatRoomMember admin =
                 memberRepository.findByChatRoomIdAndUserId(chatRoomId, adminUserId)
                         .orElseThrow(() -> new RuntimeException("Not a member"));
 
         if (admin.getRole() != ChatRoomRole.ADMIN) {
             throw new RuntimeException("Only admins can remove members");
+        }
+
+        // Find target user
+        ChatUser targetUser =
+                userRepository.findByUsernameAndActiveTrue(targetUsername)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+        ChatRoomMember target =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, targetUser.getId())
+                        .orElseThrow(() -> new RuntimeException("User not in group"));
+
+        // 🔐 SAFETY CHECK: if target is ADMIN, ensure not last admin
+        if (target.getRole() == ChatRoomRole.ADMIN) {
+            long adminCount =
+                    memberRepository.countByChatRoomIdAndRole(
+                            chatRoomId,
+                            ChatRoomRole.ADMIN
+                    );
+
+            if (adminCount <= 1) {
+                throw new RuntimeException("Cannot remove the last admin from the group");
+            }
+        }
+
+        memberRepository.delete(target);
+
+        log.info(
+                "USER REMOVED from GROUP | roomId={} | user={} | removedBy={}",
+                chatRoomId,
+                targetUsername,
+                adminUserId
+        );
+    }
+
+
+    public List<ChatRoomListResponse> listMyChatRooms(String userId) {
+
+        List<ChatRoom> rooms = chatRoomRepository.findAllByUserId(userId);
+
+        return rooms.stream().map(room -> {
+
+            List<String> members =
+                    memberRepository.findByChatRoomId(room.getId())
+                            .stream()
+                            .map(m -> m.getUser().getUsername())
+                            .toList();
+
+            return new ChatRoomListResponse(
+                    room.getId(),
+                    room.getType().name(),
+                    room.getName(),
+                    members
+            );
+
+        }).toList();
+    }
+
+    public void promoteToAdmin(
+            String adminUserId,
+            String chatRoomId,
+            String targetUsername
+    ) {
+
+        ChatRoom room = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new RuntimeException("Chat room not found"));
+
+        if (room.getType() != ChatRoomType.GROUP) {
+            throw new RuntimeException("Only group chats support roles");
+        }
+
+        ChatRoomMember admin =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, adminUserId)
+                        .orElseThrow(() -> new RuntimeException("Not a member"));
+
+        if (admin.getRole() != ChatRoomRole.ADMIN) {
+            throw new RuntimeException("Only admins can promote members");
         }
 
         ChatUser targetUser =
@@ -200,27 +277,58 @@ public class ChatRoomService {
                         .orElseThrow(() -> new RuntimeException("User not in group"));
 
         if (target.getRole() == ChatRoomRole.ADMIN) {
-            throw new RuntimeException("Cannot remove another admin");
+            throw new RuntimeException("User is already admin");
         }
 
-        memberRepository.delete(target);
+        target.setRole(ChatRoomRole.ADMIN);
+        memberRepository.save(target);
 
         log.info(
-                "USER REMOVED from GROUP | roomId={} | user={}",
-                chatRoomId, targetUsername
+                "PROMOTED TO ADMIN | roomId={} | user={} | byAdmin={}",
+                chatRoomId, targetUsername, adminUserId
         );
     }
 
-    public List<ChatRoomListResponse> listMyChatRooms(String userId) {
+    public void demoteToMember(
+            String adminUserId,
+            String chatRoomId,
+            String targetUsername
+    ) {
 
-        return chatRoomRepository.findAllByUserId(userId)
-                .stream()
-                .map(room -> new ChatRoomListResponse(
-                        room.getId(),
-                        room.getType().name(),
-                        room.getName()
-                ))
-                .toList();
+        ChatRoomMember admin =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, adminUserId)
+                        .orElseThrow(() -> new RuntimeException("Not a member"));
+
+        if (admin.getRole() != ChatRoomRole.ADMIN) {
+            throw new RuntimeException("Only admins can demote admins");
+        }
+
+        ChatUser targetUser =
+                userRepository.findByUsernameAndActiveTrue(targetUsername)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+        ChatRoomMember target =
+                memberRepository.findByChatRoomIdAndUserId(chatRoomId, targetUser.getId())
+                        .orElseThrow(() -> new RuntimeException("User not in group"));
+
+        if (target.getRole() != ChatRoomRole.ADMIN) {
+            throw new RuntimeException("User is not an admin");
+        }
+
+        long adminCount =
+                memberRepository.countByChatRoomIdAndRole(chatRoomId, ChatRoomRole.ADMIN);
+
+        if (adminCount <= 1) {
+            throw new RuntimeException("Cannot demote the last admin");
+        }
+
+        target.setRole(ChatRoomRole.MEMBER);
+        memberRepository.save(target);
+
+        log.info(
+                "DEMOTED TO MEMBER | roomId={} | user={} | byAdmin={}",
+                chatRoomId, targetUsername, adminUserId
+        );
     }
 
 }
