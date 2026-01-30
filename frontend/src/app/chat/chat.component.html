@@ -1,0 +1,50 @@
+<div class="chat-wrapper">
+
+  <div class="chat-header">
+    <div>
+      <div class="title">Chat Room</div>
+      <div class="subtitle">
+        Connected as: <b>{{ currentUsername || 'Guest' }}</b>
+        <span *ngIf="getOtherUserId()" class="presence-indicator">
+          <span
+            class="status-dot"
+            [ngClass]="isOnline(getOtherUserId()!) ? 'online' : 'offline'"
+          ></span>
+          <span *ngIf="isOnline(getOtherUserId()!)">Online</span>
+          <span *ngIf="!isOnline(getOtherUserId()!)">{{ getLastSeen(getOtherUserId()!) }}</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-body" #chatBody>
+    <div
+      *ngFor="let msg of messages"
+      class="message"
+      [ngClass]="msg.senderId === currentUserId ? 'me' : 'other'"
+    >
+      <div class="sender">
+        {{ msg.senderId === currentUserId ? 'You' : msg.senderUsername }}
+      </div>
+      <div class="content-wrapper">
+        <div class="content">{{ msg.content }}</div>
+        <!-- Read receipts (only for messages sent by current user) -->
+        <div *ngIf="msg.senderId === currentUserId" class="receipt-indicator">
+          <span *ngIf="(msg.readCount || 0) > 0" class="checkmark read">✓✓</span>
+          <span *ngIf="(msg.readCount || 0) === 0 && (msg.deliveredCount || 0) > 0" class="checkmark delivered">✓</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-input">
+    <input
+      type="text"
+      placeholder="Type your message..."
+      [(ngModel)]="message"
+      (keyup.enter)="send()"
+    />
+    <button (click)="send()" [disabled]="!wsConnected || !message.trim()">Send</button>
+  </div>
+
+</div>

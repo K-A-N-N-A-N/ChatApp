@@ -7,12 +7,13 @@ import java.time.Instant;
 
 @Data
 @AllArgsConstructor
-public class ChatMessageResponse {
-    private String id;
-    private String senderId;
-    private String senderUsername;
-    private String content;
-    private Instant createdAt;
+public class MessageReadReceipt {
+
+    private String messageId;
+    private String chatRoomId;
+    private String readerId;
     private long deliveredCount;
     private long readCount;
+    private Instant readAt;
 }
+

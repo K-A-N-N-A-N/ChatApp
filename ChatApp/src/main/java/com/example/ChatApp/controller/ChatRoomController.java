@@ -1,7 +1,10 @@
 package com.example.ChatApp.controller;
 
 import com.example.ChatApp.dto.*;
+import com.example.ChatApp.entity.MessageStatusType;
 import com.example.ChatApp.repository.MessageRepository;
+import com.example.ChatApp.repository.MessageStatusRepository;
+import com.example.ChatApp.service.UserPresenceService;
 import com.example.ChatApp.service.ChatRoomService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/chatrooms")
@@ -18,6 +20,8 @@ public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
     private final MessageRepository messageRepository;
+    private final MessageStatusRepository messageStatusRepository;
+    private final UserPresenceService userPresenceService;
 
     @PostMapping("/private/{userId}")
     public ResponseEntity<ChatRoomResponse> createPrivateChat(
@@ -36,10 +40,19 @@ public class ChatRoomController {
                 .findByChatRoomIdOrderByCreatedAtAsc(chatRoomId)
                 .stream()
                 .map(msg -> new ChatMessageResponse(
+                        msg.getId(),
                         msg.getSender().getId(),
                         msg.getSender().getUsername(),
                         msg.getContent(),
-                        msg.getCreatedAt()
+                        msg.getCreatedAt(),
+                        messageStatusRepository.countByMessageIdAndStatus(
+                                msg.getId(),
+                                MessageStatusType.DELIVERED
+                        ),
+                        messageStatusRepository.countByMessageIdAndStatus(
+                                msg.getId(),
+                                MessageStatusType.READ
+                        )
                 ))
                 .toList();
     }
@@ -136,6 +149,11 @@ public class ChatRoomController {
         );
 
         return new ApiResponse("Admin demoted to member");
+    }
+
+    @GetMapping("/{chatRoomId}/presence")
+    public List<PresenceUpdate> getPresence(@PathVariable String chatRoomId) {
+        return userPresenceService.getPresenceForChatRoom(chatRoomId);
     }
 
 }
