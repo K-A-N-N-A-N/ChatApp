@@ -36,6 +36,8 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
             String chatRoomId,
             String userId
     );
+
+    List<ChatRoomMember> findByUserId(String userId);
 }
 
 
