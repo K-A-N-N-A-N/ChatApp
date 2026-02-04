@@ -1,14 +1,12 @@
 package com.example.ChatApp.websocket;
 
-import com.example.ChatApp.dto.ChatMessageRequest;
-import com.example.ChatApp.dto.ChatMessageResponse;
-import com.example.ChatApp.dto.MessageReadReceipt;
-import com.example.ChatApp.dto.MessageReadRequest;
+import com.example.ChatApp.dto.*;
 import com.example.ChatApp.entity.ChatRoom;
 import com.example.ChatApp.entity.ChatUser;
 import com.example.ChatApp.entity.Message;
 import com.example.ChatApp.entity.MessageStatusType;
 import com.example.ChatApp.entity.MessageType;
+import com.example.ChatApp.kakfa.ChatMessageProducer;
 import com.example.ChatApp.repository.MessageRepository;
 import com.example.ChatApp.repository.UserRepository;
 import com.example.ChatApp.service.MessageStatusService;
@@ -17,6 +15,8 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+
+import java.time.Instant;
 import java.util.Map;
 
 @Controller
@@ -27,6 +27,7 @@ public class ChatWebSocketController {
     private final MessageRepository messageRepository;
     private final UserRepository chatUserRepository;
     private final MessageStatusService messageStatusService;
+    private final ChatMessageProducer  chatMessageProducer;
 
     @MessageMapping("/chat.send")
     public void sendMessage(
@@ -43,50 +44,16 @@ public class ChatWebSocketController {
         if (userId == null || chatRoomId == null) return;
         if (request.getContent() == null || request.getContent().isBlank()) return;
 
-        // Fetch username
-        ChatUser sender = chatUserRepository.findById(userId)
-                .orElseThrow();
-
-        // ID-only reference for room
-        ChatRoom roomRef = new ChatRoom();
-        roomRef.setId(chatRoomId);
-
-        Message message = new Message();
-        message.setChatRoom(roomRef);
-        message.setSender(sender);
-        message.setContent(request.getContent());
-        message.setMessageType(MessageType.TEXT);
-
-        messageRepository.save(message);
-
-        // Create delivered statuses for all room members except sender
-        messageStatusService.createDeliveredStatusesForMessage(message);
-
-        long deliveredCount = messageStatusService.countByStatus(
-                message.getId(),
-                MessageStatusType.DELIVERED
+        ChatMessageEvent event = new ChatMessageEvent(
+                chatRoomId,
+                userId,
+                request.getContent(),
+                Instant.now()
         );
 
-        long readCount = messageStatusService.countByStatus(
-                message.getId(),
-                MessageStatusType.READ
-        );
-
-        ChatMessageResponse response = new ChatMessageResponse(
-                message.getId(),
-                sender.getId(),
-                sender.getUsername(),
-                message.getContent(),
-                message.getCreatedAt(),
-                deliveredCount,
-                readCount
-        );
-
-        messagingTemplate.convertAndSend(
-                "/topic/chatroom/" + chatRoomId,
-                response
-        );
+        chatMessageProducer.publish(event);
     }
+
 
     @MessageMapping("/chat.markRead")
     public void markRead(
