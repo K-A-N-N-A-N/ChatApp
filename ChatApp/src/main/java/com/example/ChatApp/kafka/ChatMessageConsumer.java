@@ -1,4 +1,4 @@
-package com.example.ChatApp.kakfa;
+package com.example.ChatApp.kafka;
 
 import com.example.ChatApp.dto.ChatMessageEvent;
 import com.example.ChatApp.dto.ChatMessageResponse;
@@ -23,6 +23,11 @@ public class ChatMessageConsumer {
     @KafkaListener(topics = "chat-messages", groupId = "chat-message-group")
     public void consume(ChatMessageEvent event) {
 
+        //DLQ TEST CONDITION
+        if (event.getContent().contains("FAIL_TEST")) {
+            throw new RuntimeException("Forced failure to test DLQ");
+        }
+
         ChatUser sender = chatUserRepository.findById(event.getSenderId())
                 .orElseThrow();
 
@@ -37,18 +42,19 @@ public class ChatMessageConsumer {
 
         messageRepository.save(message);
 
-        // Create delivered statuses
         messageStatusService.createDeliveredStatusesForMessage(message);
 
-        long deliveredCount = messageStatusService.countByStatus(
-                message.getId(),
-                MessageStatusType.DELIVERED
-        );
+        long deliveredCount =
+                messageStatusService.countByStatus(
+                        message.getId(),
+                        MessageStatusType.DELIVERED
+                );
 
-        long readCount = messageStatusService.countByStatus(
-                message.getId(),
-                MessageStatusType.READ
-        );
+        long readCount =
+                messageStatusService.countByStatus(
+                        message.getId(),
+                        MessageStatusType.READ
+                );
 
         ChatMessageResponse response = new ChatMessageResponse(
                 message.getId(),
@@ -65,6 +71,7 @@ public class ChatMessageConsumer {
                 response
         );
     }
+
 }
 
 

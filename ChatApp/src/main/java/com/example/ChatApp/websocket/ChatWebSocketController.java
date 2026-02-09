@@ -1,12 +1,9 @@
 package com.example.ChatApp.websocket;
 
 import com.example.ChatApp.dto.*;
-import com.example.ChatApp.entity.ChatRoom;
-import com.example.ChatApp.entity.ChatUser;
 import com.example.ChatApp.entity.Message;
 import com.example.ChatApp.entity.MessageStatusType;
-import com.example.ChatApp.entity.MessageType;
-import com.example.ChatApp.kakfa.ChatMessageProducer;
+import com.example.ChatApp.kafka.ChatMessageProducer;
 import com.example.ChatApp.repository.MessageRepository;
 import com.example.ChatApp.repository.UserRepository;
 import com.example.ChatApp.service.MessageStatusService;

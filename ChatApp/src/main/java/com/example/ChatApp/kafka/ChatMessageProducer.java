@@ -1,4 +1,4 @@
-package com.example.ChatApp.kakfa;
+package com.example.ChatApp.kafka;
 
 import com.example.ChatApp.dto.ChatMessageEvent;
 import lombok.RequiredArgsConstructor;
