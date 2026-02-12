@@ -16,12 +16,6 @@ interface Message {
   readCount?: number;
 }
 
-interface UserPresence {
-  userId: string;
-  status: string;
-  lastSeen: string;
-}
-
 @Component({
   selector: 'app-chat',
   standalone: true,
@@ -39,8 +33,9 @@ export class ChatComponent {
   messages: Message[] = [];
   wsConnected = false;
 
-  // Track user presence
-  userPresences: Map<string, UserPresence> = new Map();
+  // Track participants and presence (WebSocket-driven only)
+  onlineUsers: Set<string> = new Set();
+  lastSeenMap: Map<string, Date> = new Map();
   otherUserIds: string[] = [];
 
   @ViewChild('chatBody') chatBody!: ElementRef;
@@ -79,16 +74,7 @@ export class ChatComponent {
         }));
 
         this.scrollToBottom();
-
-        // Load initial presence
-        this.chat.getPresence(this.chatRoomId).subscribe(presences => {
-          presences.forEach(p => {
-            this.userPresences.set(p.userId, p);
-            if (p.userId !== this.currentUserId) {
-              this.otherUserIds.push(p.userId);
-            }
-          });
-        });
+        this.computeOtherUserIdsFromMessages();
 
         // Connect WebSocket
         this.ws.connect(
@@ -119,6 +105,13 @@ export class ChatComponent {
     this.messages.push(newMessage);
     this.scrollToBottom();
 
+    // Track other participants based on incoming messages
+    if (newMessage.senderId && newMessage.senderId !== this.currentUserId) {
+      if (!this.otherUserIds.includes(newMessage.senderId)) {
+        this.otherUserIds.push(newMessage.senderId);
+      }
+    }
+
     // Auto-mark as read if it's from someone else
     if (msg.senderId !== this.currentUserId && msg.id) {
       setTimeout(() => this.markMessageAsRead(msg.id), 500);
@@ -126,7 +119,18 @@ export class ChatComponent {
   }
 
   onPresenceUpdate(presence: any) {
-    this.userPresences.set(presence.userId, presence);
+    const userId = presence?.userId;
+    if (!userId) {
+      return;
+    }
+
+    if (presence.online) {
+      this.onlineUsers.add(userId);
+      this.lastSeenMap.delete(userId);
+    } else {
+      this.onlineUsers.delete(userId);
+      this.lastSeenMap.set(userId, new Date());
+    }
   }
 
   onReadReceipt(receipt: any) {
@@ -173,14 +177,13 @@ export class ChatComponent {
 
   // Helper methods for template
   isOnline(userId: string): boolean {
-    return this.userPresences.get(userId)?.status === 'ONLINE';
+    return this.onlineUsers.has(userId);
   }
 
   getLastSeen(userId: string): string {
-    const presence = this.userPresences.get(userId);
-    if (!presence || presence.status === 'ONLINE') return '';
+    const lastSeen = this.lastSeenMap.get(userId);
+    if (!lastSeen) return '';
 
-    const lastSeen = new Date(presence.lastSeen);
     const now = new Date();
     const diffMs = now.getTime() - lastSeen.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -199,5 +202,15 @@ export class ChatComponent {
   ngOnDestroy() {
     this.ws.disconnect();
     this.wsConnected = false;
+  }
+
+  private computeOtherUserIdsFromMessages() {
+    const ids = new Set<string>();
+    this.messages.forEach(m => {
+      if (m.senderId && m.senderId !== this.currentUserId) {
+        ids.add(m.senderId);
+      }
+    });
+    this.otherUserIds = Array.from(ids);
   }
 }

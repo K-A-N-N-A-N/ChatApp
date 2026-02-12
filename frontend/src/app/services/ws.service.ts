@@ -38,7 +38,7 @@ export class WsService {
 
       // Subscribe to presence updates
       this.client.subscribe(
-        `/topic/chatroom/${chatRoomId}/presence`,
+        `/topic/presence`,
         message => onPresence(JSON.parse(message.body))
       );
 
@@ -47,6 +47,17 @@ export class WsService {
         `/topic/chatroom/${chatRoomId}/receipts`,
         message => onReadReceipt(JSON.parse(message.body))
       );
+
+      // After subscriptions are active, request a full presence snapshot
+      // so we don't miss ONLINE events that happened before subscribing.
+      try {
+        this.client.publish({
+          destination: '/app/presence.sync',
+          body: ''
+        });
+      } catch {
+        // ignore - snapshot is just a best-effort enhancement
+      }
 
       onConnected?.();
     };

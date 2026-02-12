@@ -13,11 +13,4 @@ export class ChatService {
       { withCredentials: true }
     );
   }
-
-  getPresence(chatRoomId: string) {
-    return this.http.get<any[]>(
-      `${environment.apiBaseUrl}/chatrooms/${chatRoomId}/presence`,
-      { withCredentials: true }
-    );
-  }
 }

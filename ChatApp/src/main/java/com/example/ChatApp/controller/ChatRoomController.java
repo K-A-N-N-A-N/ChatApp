@@ -4,7 +4,6 @@ import com.example.ChatApp.dto.*;
 import com.example.ChatApp.entity.MessageStatusType;
 import com.example.ChatApp.repository.MessageRepository;
 import com.example.ChatApp.repository.MessageStatusRepository;
-import com.example.ChatApp.service.UserPresenceService;
 import com.example.ChatApp.service.ChatRoomService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +20,6 @@ public class ChatRoomController {
     private final ChatRoomService chatRoomService;
     private final MessageRepository messageRepository;
     private final MessageStatusRepository messageStatusRepository;
-    private final UserPresenceService userPresenceService;
 
     @PostMapping("/private/{userId}")
     public ResponseEntity<ChatRoomResponse> createPrivateChat(
@@ -149,11 +147,6 @@ public class ChatRoomController {
         );
 
         return new ApiResponse("Admin demoted to member");
-    }
-
-    @GetMapping("/{chatRoomId}/presence")
-    public List<PresenceUpdate> getPresence(@PathVariable String chatRoomId) {
-        return userPresenceService.getPresenceForChatRoom(chatRoomId);
     }
 
 }

@@ -2,15 +2,13 @@ package com.example.ChatApp.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-
-import java.time.Instant;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
-public class PresenceUpdate {
+@NoArgsConstructor
+public class UserPresenceEvent {
 
     private String userId;
-    private String status;
-    private Instant lastSeen;
+    private boolean online;
 }
-
